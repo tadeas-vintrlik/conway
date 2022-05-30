@@ -9,17 +9,18 @@ import (
 )
 
 type Coord struct {
-	x, y uint64
+	x, y int
 }
 
 type Matrix struct {
-	data [10][10]bool
+	xSize, ySize int
+	data         [][]bool
 }
 
-// Converts the number in string s to uint64
+// Converts the number in string s to int
 // Trimming it in case there are whitespaces
 // In case of error exits with rc 1
-func readNumber(s string) uint64 {
+func readNumber(s string) int {
 	trimmed := strings.Trim(s, " ")
 	num, err := strconv.ParseInt(trimmed, 10, 0)
 
@@ -34,7 +35,7 @@ func readNumber(s string) uint64 {
 		os.Exit(1)
 	}
 
-	return uint64(num)
+	return int(num)
 }
 
 // Reads coordinates in the format "%d, %d\n" from file on filename
@@ -64,10 +65,18 @@ func readCoords(filename string) []Coord {
 	return ret
 }
 
+func newMatrix(xSize, ySize int) Matrix {
+	data := make([][]bool, xSize)
+	for x := 0; x < xSize; x++ {
+		data[x] = make([]bool, ySize)
+	}
+	return Matrix{xSize, ySize, data}
+}
+
 func (m Matrix) String() string {
 	ret := ""
-	for y := 0; y < 10; y++ {
-		for x := 0; x < 10; x++ {
+	for y := 0; y < m.ySize; y++ {
+		for x := 0; x < m.xSize; x++ {
 			if m.data[x][y] {
 				ret += "X"
 			} else {
@@ -80,15 +89,15 @@ func (m Matrix) String() string {
 }
 
 func (m Matrix) isAlive(x, y int) bool {
-	if x < 0 || y < 0 {
-		return false
+	xn := x % m.xSize
+	if xn < 0 {
+		xn += m.xSize
 	}
-
-	if x >= 10 || y >= 10 {
-		return false
+	yn := y % m.ySize
+	if yn < 0 {
+		yn += m.ySize
 	}
-
-	return m.data[x][y]
+	return m.data[xn][yn]
 }
 
 // Will return number of alive neighbours for cell at coordinates x and y
@@ -122,9 +131,9 @@ func (m Matrix) aliveNeighbours(x, y int) int {
 }
 
 func (m Matrix) NextTurn() Matrix {
-	ret := Matrix{}
-	for y := 0; y < 10; y++ {
-		for x := 0; x < 10; x++ {
+	ret := newMatrix(m.xSize, m.ySize)
+	for y := 0; y < m.ySize; y++ {
+		for x := 0; x < m.xSize; x++ {
 			// 1. Any live cell with two or three live neighbours survives.
 			if m.isAlive(x, y) {
 				neighbours := m.aliveNeighbours(x, y)
@@ -146,14 +155,38 @@ func (m Matrix) NextTurn() Matrix {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprint(os.Stderr, "usage: ./conway file\n")
+	if len(os.Args) != 4 {
+		fmt.Fprint(os.Stderr, "usage: ./conway width height file\n")
 		os.Exit(1)
 	}
-	m := Matrix{}
-	seed := readCoords(os.Args[1])
+
+	width, err := strconv.ParseInt(os.Args[1], 10, 0)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err, "\n")
+		os.Exit(1)
+	}
+	if width <= 0 {
+		fmt.Fprint(os.Stderr, "Expected integers larger than 0\n")
+		os.Exit(1)
+	}
+
+	height, err := strconv.ParseInt(os.Args[2], 10, 0)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err, "\n")
+		os.Exit(1)
+	}
+	if height <= 0 {
+		fmt.Fprint(os.Stderr, "Expected integers larger than 0\n")
+		os.Exit(1)
+	}
+
+	m := newMatrix(int(width), int(height))
+	seed := readCoords(os.Args[3])
 
 	for _, c := range seed {
+		if c.x >= m.xSize || c.y >= m.ySize {
+			fmt.Fprint(os.Stderr, "Invalid starting seed, larger than size of field!\n")
+		}
 		m.data[c.x][c.y] = true
 	}
 
