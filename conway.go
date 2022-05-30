@@ -13,7 +13,7 @@ type Coord struct {
 }
 
 type Matrix struct {
-	data [10][10] bool
+	data [10][10]bool
 }
 
 // Converts the number in string s to uint64
@@ -37,13 +37,19 @@ func readNumber(s string) uint64 {
 	return uint64(num)
 }
 
-// Reads coordinates in the format "%d, %d\n" from standard input
+// Reads coordinates in the format "%d, %d\n" from file on filename
 // Returns slice of read coordinates
 // In case of error exits with rc 1
-func readCoords() []Coord {
+func readCoords(filename string) []Coord {
 	// Read the starting positions
 	var ret []Coord
-	scanner := bufio.NewScanner(os.Stdin)
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err, "\n")
+		os.Exit(1)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		sep := strings.Split(scanner.Text(), ",")
 		if len(sep) != 2 {
@@ -73,13 +79,91 @@ func (m Matrix) String() string {
 	return ret
 }
 
-func main() {
-	m := Matrix{}
-	startingCoords := readCoords()
+func (m Matrix) isAlive(x, y int) bool {
+	if x < 0 || y < 0 {
+		return false
+	}
 
-	for _, c := range(startingCoords) {
+	if x >= 10 || y >= 10 {
+		return false
+	}
+
+	return m.data[x][y]
+}
+
+// Will return number of alive neighbours for cell at coordinates x and y
+func (m Matrix) aliveNeighbours(x, y int) int {
+	ret := 0
+	if m.isAlive(x-1, y-1) {
+		ret++
+	}
+	if m.isAlive(x, y-1) {
+		ret++
+	}
+	if m.isAlive(x+1, y-1) {
+		ret++
+	}
+	if m.isAlive(x-1, y) {
+		ret++
+	}
+	if m.isAlive(x+1, y) {
+		ret++
+	}
+	if m.isAlive(x-1, y+1) {
+		ret++
+	}
+	if m.isAlive(x, y+1) {
+		ret++
+	}
+	if m.isAlive(x+1, y+1) {
+		ret++
+	}
+	return ret
+}
+
+func (m Matrix) NextTurn() Matrix {
+	ret := Matrix{}
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			// 1. Any live cell with two or three live neighbours survives.
+			if m.isAlive(x, y) {
+				neighbours := m.aliveNeighbours(x, y)
+				if neighbours == 2 || neighbours == 3 {
+					ret.data[x][y] = true
+				}
+			}
+			// 2. Any dead cell with three live neighbours becomes a live cell.
+			if !m.isAlive(x, y) {
+				if m.aliveNeighbours(x, y) == 3 {
+					ret.data[x][y] = true
+				}
+			}
+			// 3. All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+			// No need to do anything as by default all booleans are false in go
+		}
+	}
+	return ret
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprint(os.Stderr, "usage: ./conway file\n")
+		os.Exit(1)
+	}
+	m := Matrix{}
+	seed := readCoords(os.Args[1])
+
+	for _, c := range seed {
 		m.data[c.x][c.y] = true
 	}
 
-	fmt.Println(m)
+	gen := 0
+	for {
+		fmt.Println("Generation ", gen, ":\n")
+		gen++
+		fmt.Println(m)
+		fmt.Println("Pres return for next generation, Ctrl-c to stop.")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		m = m.NextTurn()
+	}
 }
