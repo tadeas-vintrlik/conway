@@ -192,7 +192,7 @@ func main() {
 
 	gen := 0
 	for {
-		fmt.Println("Generation ", gen, ":\n")
+		fmt.Println("Generation ", gen, ":")
 		gen++
 		fmt.Println(m)
 		fmt.Println("Pres return for next generation, Ctrl-c to stop.")
