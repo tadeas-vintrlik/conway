@@ -12,6 +12,10 @@ type Coord struct {
 	x, y uint64
 }
 
+type Matrix struct {
+	data [10][10] bool
+}
+
 // Converts the number in string s to uint64
 // Trimming it in case there are whitespaces
 // In case of error exits with rc 1
@@ -54,6 +58,28 @@ func readCoords() []Coord {
 	return ret
 }
 
+func (m Matrix) String() string {
+	ret := ""
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			if m.data[x][y] {
+				ret += "X"
+			} else {
+				ret += "_"
+			}
+		}
+		ret += "\n"
+	}
+	return ret
+}
+
 func main() {
-	fmt.Println(readCoords())
+	m := Matrix{}
+	startingCoords := readCoords()
+
+	for _, c := range(startingCoords) {
+		m.data[c.x][c.y] = true
+	}
+
+	fmt.Println(m)
 }
